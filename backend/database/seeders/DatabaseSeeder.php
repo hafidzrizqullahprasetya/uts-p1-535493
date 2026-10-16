@@ -9,12 +9,8 @@ use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User Admin untuk pengujian autentikasi
         User::updateOrCreate(
             ['email' => 'admin@ugm.ac.id'],
             [
@@ -23,7 +19,6 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Data awal inventaris aset laboratorium
         $assets = [
             [
                 'name' => 'Workstation Lenovo ThinkStation P360',

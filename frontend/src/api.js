@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// Alamat API diambil dari variabel lingkungan VITE_API_BASE_URL (tidak ditulis mati/hardcoded)
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 const apiClient = axios.create({
@@ -11,7 +10,6 @@ const apiClient = axios.create({
   },
 });
 
-// Request Interceptor: Otomatis lampirkan Bearer Token jika tersedia di localStorage
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('auth_token');
@@ -23,7 +21,6 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Tangani error 401 (token kedaluwarsa atau tidak valid)
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {

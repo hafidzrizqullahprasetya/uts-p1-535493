@@ -85,11 +85,11 @@ class AssetApiTest extends TestCase
     public function test_create_asset_fails_validation_returns_422(): void
     {
         $payload = [
-            'name' => '', // kosong -> invalid
-            'code' => '', // kosong -> invalid
+            'name' => '',
+            'code' => '',
             'category' => '',
-            'status' => 'status-ngawur', // invalid enum
-            'price' => -100, // negatif -> invalid
+            'status' => 'status-ngawur',
+            'price' => -100,
         ];
 
         $response = $this->withHeader('Authorization', 'Bearer '.$this->token)

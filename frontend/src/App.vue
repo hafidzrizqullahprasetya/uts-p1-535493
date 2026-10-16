@@ -1,6 +1,5 @@
 <template>
   <div class="app-container">
-    <!-- Halaman Login (Jika belum login) -->
     <div v-if="!isAuthenticated" class="auth-wrapper">
       <div class="auth-card">
         <div class="auth-header">
@@ -48,9 +47,7 @@
       </div>
     </div>
 
-    <!-- Halaman Dashboard & CRUD Aset (Jika terotentikasi) -->
     <div v-else class="dashboard-wrapper">
-      <!-- Top Navbar -->
       <header class="navbar">
         <div class="nav-brand">
           <div class="brand-icon">🏛️</div>
@@ -71,14 +68,11 @@
         </div>
       </header>
 
-      <!-- Main Content -->
       <main class="main-content">
-        <!-- Notification Banner -->
         <div v-if="notification.message" :class="['alert', `alert-${notification.type}`]">
           {{ notification.message }}
         </div>
 
-        <!-- Metric Cards -->
         <div class="metrics-grid">
           <div class="metric-card">
             <div class="metric-label">Total Aset</div>
@@ -108,7 +102,6 @@
           </div>
         </div>
 
-        <!-- Table Toolbar -->
         <div class="table-card">
           <div class="card-header">
             <div class="header-left">
@@ -135,13 +128,11 @@
             </div>
           </div>
 
-          <!-- Loading state -->
           <div v-if="isLoading" class="loading-state">
             <div class="spinner"></div>
             <p>Memuat data aset dari server...</p>
           </div>
 
-          <!-- Table -->
           <div v-else class="table-responsive">
             <table class="data-table">
               <thead>
@@ -189,7 +180,6 @@
         </div>
       </main>
 
-      <!-- Modal Tambah / Edit Aset -->
       <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
         <div class="modal-card">
           <div class="modal-header">
@@ -291,7 +281,6 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import apiClient, { apiBaseUrl } from './api';
 
-// State Autentikasi
 const isAuthenticated = ref(false);
 const currentUser = ref(null);
 const isSubmitting = ref(false);
@@ -302,13 +291,11 @@ const loginForm = reactive({
   password: 'password123',
 });
 
-// State Data Aset
 const assets = ref([]);
 const isLoading = ref(false);
 const searchQuery = ref('');
 const statusFilter = ref('');
 
-// State Notifikasi
 const notification = reactive({
   message: '',
   type: 'success',
@@ -322,7 +309,6 @@ const showNotification = (message, type = 'success') => {
   }, 4000);
 };
 
-// State Modal CRUD
 const showModal = ref(false);
 const isEditMode = ref(false);
 const editingAssetId = ref(null);
@@ -337,7 +323,6 @@ const form = reactive({
   location: '',
 });
 
-// Reset Form
 const resetForm = () => {
   form.name = '';
   form.code = '';
@@ -349,12 +334,10 @@ const resetForm = () => {
   editingAssetId.value = null;
 };
 
-// Hitung Total Nilai Aset
 const totalAssetValue = computed(() => {
   return assets.value.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
 });
 
-// Filter Aset berdasarkan search query & status
 const filteredAssets = computed(() => {
   return assets.value.filter((item) => {
     const matchesSearch =
@@ -366,7 +349,6 @@ const filteredAssets = computed(() => {
   });
 });
 
-// Format Rupiah
 const formatRupiah = (val) => {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -375,7 +357,6 @@ const formatRupiah = (val) => {
   }).format(val || 0);
 };
 
-// Autentikasi: Login
 const handleLogin = async () => {
   isSubmitting.value = true;
   loginError.value = '';
@@ -404,7 +385,6 @@ const handleLogin = async () => {
   }
 };
 
-// Autentikasi: Logout
 const handleLogout = async () => {
   try {
     await apiClient.post('/logout');
@@ -419,7 +399,6 @@ const handleLogout = async () => {
   }
 };
 
-// CRUD: Tampil Semua Data (GET /api/assets)
 const fetchAssets = async () => {
   isLoading.value = true;
   try {
@@ -432,14 +411,12 @@ const fetchAssets = async () => {
   }
 };
 
-// Buka Modal Tambah
 const openCreateModal = () => {
   resetForm();
   isEditMode.value = false;
   showModal.value = true;
 };
 
-// Buka Modal Edit
 const openEditModal = (asset) => {
   resetForm();
   isEditMode.value = true;
@@ -458,7 +435,6 @@ const closeModal = () => {
   resetForm();
 };
 
-// CRUD: Simpan Data (POST 201 Created atau PUT 200 OK)
 const saveAsset = async () => {
   isSubmitting.value = true;
   formErrors.value = {};
@@ -489,7 +465,6 @@ const saveAsset = async () => {
   }
 };
 
-// CRUD: Hapus Data (DELETE 200 OK)
 const handleDelete = async (asset) => {
   if (!confirm(`Apakah Anda yakin ingin menghapus aset "${asset.name}" (${asset.code})?`)) {
     return;
@@ -503,7 +478,6 @@ const handleDelete = async (asset) => {
   }
 };
 
-// Inisialisasi saat komponen dimuat
 onMounted(() => {
   const token = localStorage.getItem('auth_token');
   const user = localStorage.getItem('auth_user');
