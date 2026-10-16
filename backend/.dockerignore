@@ -1,0 +1,7 @@
+vendor
+node_modules
+.git
+.env
+.phpunit.result.cache
+database/database.sqlite
+storage/*.key
