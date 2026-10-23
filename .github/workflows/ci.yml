@@ -21,6 +21,8 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      APP_KEY: ${{ secrets.APP_KEY }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -28,7 +30,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
+          php-version: '8.5'
           extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, bcmath
           coverage: none
 
@@ -49,8 +51,8 @@ jobs:
       - name: Install Dependencies
         run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
-      - name: Generate Application Key
-        run: php artisan key:generate
+      - name: Generate Application Key (fallback)
+        run: if [ -z "$APP_KEY" ]; then php artisan key:generate; fi
 
       - name: Run Database Migrations
         run: php artisan migrate --force
@@ -106,9 +108,6 @@ jobs:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
-          build-args: |
-            APP_KEY=${{ secrets.APP_KEY }}
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
           tags: ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
 
       - name: Build and Push Frontend Docker Image

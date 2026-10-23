@@ -1,4 +1,4 @@
-FROM php:8.4-cli-alpine
+FROM php:8.5.12-cli-alpine
 
 WORKDIR /var/www/html
 
@@ -30,7 +30,6 @@ COPY . .
 RUN composer dump-autoload --optimize \
     && cp -n .env.example .env || true \
     && touch database/database.sqlite \
-    && php artisan key:generate --force \
     && chown -R www-data:www-data storage bootstrap/cache database
 
 EXPOSE 8000
