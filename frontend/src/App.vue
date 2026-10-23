@@ -1,285 +1,279 @@
 <template>
-  <div class="app-container">
-    <div v-if="!isAuthenticated" class="auth-wrapper">
-      <div class="auth-card">
-        <div class="auth-header">
-          <div class="badge-tag">UTS KEPL 2026 — 535493</div>
-          <h2>Masuk ke Sistem Aset Lab</h2>
-          <p class="subtitle">Kelola inventaris laboratorium TRPL SV UGM</p>
-        </div>
-
-        <div v-if="loginError" class="alert alert-error">
-          {{ loginError }}
-        </div>
-
-        <form @submit.prevent="handleLogin" class="auth-form">
-          <div class="form-group">
-            <label for="email">Alamat Email</label>
-            <input
-              id="email"
-              v-model="loginForm.email"
-              type="email"
-              placeholder="admin@ugm.ac.id"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="password">Kata Sandi</label>
-            <input
-              id="password"
-              v-model="loginForm.password"
-              type="password"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-
-          <button type="submit" class="btn btn-primary btn-block" :disabled="isSubmitting">
-            <span v-if="isSubmitting">Memproses...</span>
-            <span v-else>Masuk Sekarang</span>
-          </button>
-        </form>
-
-        <div class="auth-footer">
-          <p class="env-info">API URL: <code>{{ apiBaseUrl }}</code></p>
-        </div>
+  <div v-if="!isAuthenticated" class="login">
+    <main class="login-sheet">
+      <div class="brand">
+        <span class="wordmark">Aset Lab TRPL</span>
+        <span class="scope">DTEDI, Sekolah Vokasi UGM</span>
       </div>
-    </div>
 
-    <div v-else class="dashboard-wrapper">
-      <header class="navbar">
-        <div class="nav-brand">
-          <div class="brand-icon">🏛️</div>
-          <div>
-            <h1>Sistem Aset Lab TRPL</h1>
-            <span class="subtext">UTS KEPL — NIM: 535493</span>
+      <h1>Masuk ke inventaris laboratorium</h1>
+      <p class="lead">Data alat, ruang penyimpanan, dan status peminjaman di lab TRPL.</p>
+
+      <p v-if="loginError" class="notice notice-error" role="alert">{{ loginError }}</p>
+
+      <form @submit.prevent="handleLogin" class="login-form">
+        <div class="field">
+          <label for="email">Email</label>
+          <input
+            id="email"
+            v-model="loginForm.email"
+            type="email"
+            autocomplete="username"
+            placeholder="admin@ugm.ac.id"
+            required
+          />
+        </div>
+
+        <div class="field">
+          <label for="password">Kata sandi</label>
+          <input
+            id="password"
+            v-model="loginForm.password"
+            type="password"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" :disabled="isSubmitting">
+          {{ isSubmitting ? 'Memeriksa akun...' : 'Masuk' }}
+        </button>
+      </form>
+
+      <p class="server">Server API <span class="mono">{{ apiBaseUrl }}</span></p>
+    </main>
+
+    <p class="login-foot">UTS KEPL 2026 · Hafidz Rizqullah Prasetya · NIM 535493</p>
+  </div>
+
+  <div v-else class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="wordmark">Aset Lab TRPL</span>
+        <span class="scope">DTEDI, SV UGM</span>
+      </div>
+
+      <div class="account">
+        <div class="account-id">
+          <span class="account-name">{{ currentUser?.name || 'Administrator' }}</span>
+          <span class="account-email">{{ currentUser?.email }}</span>
+        </div>
+        <button @click="handleLogout" class="btn btn-secondary">Keluar</button>
+      </div>
+    </header>
+
+    <main class="sheet">
+      <div class="title-row">
+        <div>
+          <h1>Inventaris aset</h1>
+          <p class="finding">{{ findingText }}</p>
+        </div>
+        <button @click="openCreateModal" class="btn btn-primary">Tambah aset</button>
+      </div>
+
+      <p
+        v-if="notification.message"
+        :class="['notice', `notice-${notification.type}`]"
+        role="status"
+      >
+        {{ notification.message }}
+      </p>
+
+      <section class="readiness" aria-labelledby="readiness-title">
+        <h2 id="readiness-title" class="visually-hidden">Kesiapan alat</h2>
+
+        <dl class="kpis">
+          <div class="kpi kpi-main">
+            <dt>Siap dipakai</dt>
+            <dd class="num">
+              {{ statusCount.tersedia }}<span class="unit"> dari {{ assets.length }} alat</span>
+            </dd>
+          </div>
+          <div class="kpi">
+            <dt>Sedang dipinjam</dt>
+            <dd class="num">{{ statusCount.dipinjam }}</dd>
+          </div>
+          <div class="kpi">
+            <dt>Perawatan atau rusak</dt>
+            <dd class="num">{{ statusCount.perawatan + statusCount.rusak }}</dd>
+          </div>
+          <div class="kpi">
+            <dt>Nilai perolehan</dt>
+            <dd class="num">{{ formatRupiah(totalAssetValue) }}</dd>
+          </div>
+        </dl>
+
+        <div v-if="assets.length" class="strip" role="img" :aria-label="stripLabel">
+          <div
+            v-for="asset in assetsByStatus"
+            :key="asset.id"
+            class="strip-cell"
+            :title="`${asset.code} · ${asset.name} · ${statusLabel(asset.status)}`"
+          >
+            <span :class="['strip-bar', `bar-${asset.status}`]"></span>
+            <span v-if="assets.length <= 16" class="strip-code mono">{{ asset.code }}</span>
           </div>
         </div>
 
-        <div class="nav-user">
-          <div class="user-info">
-            <span class="user-name">{{ currentUser?.name || 'Administrator' }}</span>
-            <span class="user-email">{{ currentUser?.email }}</span>
-          </div>
-          <button @click="handleLogout" class="btn btn-outline-danger">
-            Keluar
+        <ul v-if="assets.length" class="legend">
+          <li v-for="s in statuses.filter((s) => statusCount[s.value])" :key="s.value">
+            <span :class="['swatch', `bar-${s.value}`]"></span>
+            {{ s.label }} <span class="num">{{ statusCount[s.value] }}</span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="list" aria-labelledby="list-title">
+        <h2 id="list-title" class="visually-hidden">Daftar aset</h2>
+
+        <div class="tabs" role="tablist" aria-label="Saring menurut status">
+          <button
+            v-for="tab in tabs"
+            :key="tab.value"
+            role="tab"
+            :aria-selected="statusFilter === tab.value"
+            :class="['tab', { active: statusFilter === tab.value }]"
+            @click="statusFilter = tab.value"
+          >
+            {{ tab.label }} <span class="num tab-count">{{ tab.count }}</span>
           </button>
         </div>
-      </header>
 
-      <main class="main-content">
-        <div v-if="notification.message" :class="['alert', `alert-${notification.type}`]">
-          {{ notification.message }}
+        <div class="toolbar">
+          <label for="search" class="visually-hidden">Cari aset</label>
+          <input
+            id="search"
+            v-model="searchQuery"
+            type="search"
+            placeholder="Cari nama, kode, kategori, atau ruang"
+            class="search"
+          />
+          <span class="count num">{{ filteredAssets.length }} aset</span>
         </div>
 
-        <div class="metrics-grid">
-          <div class="metric-card">
-            <div class="metric-label">Total Aset</div>
-            <div class="metric-value">{{ assets.length }}</div>
-            <div class="metric-sub">Unit terdata di sistem</div>
-          </div>
-          <div class="metric-card">
-            <div class="metric-label">Aset Tersedia</div>
-            <div class="metric-value text-success">
-              {{ assets.filter(a => a.status === 'tersedia').length }}
-            </div>
-            <div class="metric-sub">Siap digunakan di lab</div>
-          </div>
-          <div class="metric-card">
-            <div class="metric-label">Sedang Dipinjam</div>
-            <div class="metric-value text-warning">
-              {{ assets.filter(a => a.status === 'dipinjam').length }}
-            </div>
-            <div class="metric-sub">Dalam masa peminjaman</div>
-          </div>
-          <div class="metric-card">
-            <div class="metric-label">Total Nilai Aset</div>
-            <div class="metric-value text-primary">
-              {{ formatRupiah(totalAssetValue) }}
-            </div>
-            <div class="metric-sub">Estimasi nilai perolehan</div>
-          </div>
+        <p v-if="isLoading" class="state">Memuat data aset dari server...</p>
+
+        <div v-else-if="loadError" class="state state-error" role="alert">
+          <p>Data aset tidak bisa dimuat dari server.</p>
+          <button @click="fetchAssets" class="btn btn-secondary">Coba lagi</button>
         </div>
 
-        <div class="table-card">
-          <div class="card-header">
-            <div class="header-left">
-              <h2>Daftar Inventaris Aset</h2>
-              <p class="subtitle">API Endpoint: <code>{{ apiBaseUrl }}/assets</code></p>
+        <div v-else-if="assets.length === 0" class="state">
+          <p>Belum ada alat yang tercatat.</p>
+          <button @click="openCreateModal" class="btn btn-secondary">Tambah alat pertama</button>
+        </div>
+
+        <div v-else-if="filteredAssets.length === 0" class="state">
+          <p>Tidak ada aset yang cocok dengan pencarian ini.</p>
+          <button @click="resetFilters" class="btn btn-secondary">Tampilkan semua</button>
+        </div>
+
+        <table v-else class="asset-table">
+          <thead>
+            <tr>
+              <th scope="col">Kode</th>
+              <th scope="col">Nama barang</th>
+              <th scope="col">Ruang</th>
+              <th scope="col" class="right">Nilai perolehan</th>
+              <th scope="col">Status</th>
+              <th scope="col"><span class="visually-hidden">Aksi</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="asset in filteredAssets" :key="asset.id">
+              <td class="cell-code mono">{{ asset.code }}</td>
+              <td class="cell-name">
+                <span class="name">{{ asset.name }}</span>
+                <span class="category">{{ asset.category }}</span>
+              </td>
+              <td class="cell-room">{{ asset.location || '-' }}</td>
+              <td class="cell-price right num">{{ formatRupiah(asset.price) }}</td>
+              <td class="cell-status">
+                <span :class="['pill', `pill-${asset.status}`]">{{ statusLabel(asset.status) }}</span>
+              </td>
+              <td class="cell-actions">
+                <button @click="openEditModal(asset)" class="btn btn-text" :aria-label="`Ubah ${asset.code}`">
+                  Ubah
+                </button>
+                <button @click="handleDelete(asset)" class="btn btn-text danger" :aria-label="`Hapus ${asset.code}`">
+                  Hapus
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <div v-if="showModal" class="backdrop" @click.self="closeModal">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+        <div class="dialog-head">
+          <h2 id="dialog-title">{{ isEditMode ? `Ubah ${form.code || 'aset'}` : 'Tambah aset' }}</h2>
+          <button @click="closeModal" class="btn btn-text" aria-label="Tutup">Tutup</button>
+        </div>
+
+        <form @submit.prevent="saveAsset" class="dialog-body" novalidate>
+          <p v-if="formErrors.general" class="notice notice-error" role="alert">{{ formErrors.general }}</p>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="f-name">Nama barang</label>
+              <input id="f-name" ref="firstField" v-model="form.name" type="text" placeholder="Laptop Dell Latitude 5430" required />
+              <span v-if="formErrors.name" class="field-error">{{ formErrors.name[0] }}</span>
             </div>
-            <div class="header-right">
-              <input
-                v-model="searchQuery"
-                type="text"
-                placeholder="Cari nama, kode, kategori..."
-                class="search-input"
-              />
-              <select v-model="statusFilter" class="filter-select">
-                <option value="">Semua Status</option>
-                <option value="tersedia">Tersedia</option>
-                <option value="dipinjam">Dipinjam</option>
-                <option value="rusak">Rusak</option>
-                <option value="perawatan">Perawatan</option>
+            <div class="field">
+              <label for="f-code">Kode inventaris</label>
+              <input id="f-code" v-model="form.code" type="text" class="mono" placeholder="AST-LAB-011" required />
+              <span v-if="formErrors.code" class="field-error">{{ formErrors.code[0] }}</span>
+            </div>
+            <div class="field">
+              <label for="f-category">Kategori</label>
+              <input id="f-category" v-model="form.category" type="text" placeholder="Perangkat Jaringan" required />
+              <span v-if="formErrors.category" class="field-error">{{ formErrors.category[0] }}</span>
+            </div>
+            <div class="field">
+              <label for="f-status">Status</label>
+              <select id="f-status" v-model="form.status" required>
+                <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
               </select>
-              <button @click="openCreateModal" class="btn btn-primary">
-                + Tambah Aset
-              </button>
+              <span v-if="formErrors.status" class="field-error">{{ formErrors.status[0] }}</span>
+            </div>
+            <div class="field">
+              <label for="f-price">Nilai perolehan (Rp)</label>
+              <input id="f-price" v-model.number="form.price" type="number" min="0" step="1000" class="num" required />
+              <span v-if="formErrors.price" class="field-error">{{ formErrors.price[0] }}</span>
+            </div>
+            <div class="field">
+              <label for="f-location">Ruang <span class="optional">(opsional)</span></label>
+              <input id="f-location" v-model="form.location" type="text" placeholder="HU.108 Laboratorium RPL 1" />
+              <span v-if="formErrors.location" class="field-error">{{ formErrors.location[0] }}</span>
             </div>
           </div>
 
-          <div v-if="isLoading" class="loading-state">
-            <div class="spinner"></div>
-            <p>Memuat data aset dari server...</p>
+          <div class="dialog-foot">
+            <button type="button" @click="closeModal" class="btn btn-secondary">Batal</button>
+            <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+              {{ isSubmitting ? 'Menyimpan...' : isEditMode ? 'Simpan perubahan' : 'Simpan aset' }}
+            </button>
           </div>
-
-          <div v-else class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Kode Aset</th>
-                  <th>Nama Barang</th>
-                  <th>Kategori</th>
-                  <th>Lokasi</th>
-                  <th>Nilai Perolehan</th>
-                  <th>Status</th>
-                  <th class="text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-if="filteredAssets.length === 0">
-                  <td colspan="7" class="empty-state">
-                    Tidak ada data aset yang cocok.
-                  </td>
-                </tr>
-                <tr v-for="asset in filteredAssets" :key="asset.id">
-                  <td>
-                    <span class="code-badge">{{ asset.code }}</span>
-                  </td>
-                  <td class="font-medium">{{ asset.name }}</td>
-                  <td>{{ asset.category }}</td>
-                  <td>{{ asset.location || '-' }}</td>
-                  <td>{{ formatRupiah(asset.price) }}</td>
-                  <td>
-                    <span :class="['badge', `badge-${asset.status}`]">
-                      {{ asset.status }}
-                    </span>
-                  </td>
-                  <td class="text-right actions-cell">
-                    <button @click="openEditModal(asset)" class="btn-icon btn-edit" title="Ubah Aset">
-                      ✏️ Edit
-                    </button>
-                    <button @click="handleDelete(asset)" class="btn-icon btn-delete" title="Hapus Aset">
-                      🗑️ Hapus
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </main>
-
-      <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
-        <div class="modal-card">
-          <div class="modal-header">
-            <h3>{{ isEditMode ? 'Ubah Data Aset' : 'Tambah Aset Baru' }}</h3>
-            <button @click="closeModal" class="close-btn">&times;</button>
-          </div>
-
-          <form @submit.prevent="saveAsset" class="modal-body">
-            <div v-if="formErrors.general" class="alert alert-error">
-              {{ formErrors.general }}
-            </div>
-
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label>Nama Aset / Barang *</label>
-                <input
-                  v-model="form.name"
-                  type="text"
-                  placeholder="Contoh: Laptop Dell Latitude"
-                  required
-                />
-                <span v-if="formErrors.name" class="field-error">{{ formErrors.name[0] }}</span>
-              </div>
-              <div class="form-group flex-1">
-                <label>Kode Aset (Unik) *</label>
-                <input
-                  v-model="form.code"
-                  type="text"
-                  placeholder="Contoh: AST-LAB-011"
-                  required
-                />
-                <span v-if="formErrors.code" class="field-error">{{ formErrors.code[0] }}</span>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label>Kategori *</label>
-                <input
-                  v-model="form.category"
-                  type="text"
-                  placeholder="Contoh: Komputer, Jaringan"
-                  required
-                />
-                <span v-if="formErrors.category" class="field-error">{{ formErrors.category[0] }}</span>
-              </div>
-              <div class="form-group flex-1">
-                <label>Status Operasional *</label>
-                <select v-model="form.status" required>
-                  <option value="tersedia">Tersedia</option>
-                  <option value="dipinjam">Dipinjam</option>
-                  <option value="rusak">Rusak</option>
-                  <option value="perawatan">Perawatan</option>
-                </select>
-                <span v-if="formErrors.status" class="field-error">{{ formErrors.status[0] }}</span>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label>Nilai Perolehan (Rp) *</label>
-                <input
-                  v-model.number="form.price"
-                  type="number"
-                  min="0"
-                  step="1000"
-                  placeholder="0"
-                  required
-                />
-                <span v-if="formErrors.price" class="field-error">{{ formErrors.price[0] }}</span>
-              </div>
-              <div class="form-group flex-1">
-                <label>Lokasi Penyimpanan</label>
-                <input
-                  v-model="form.location"
-                  type="text"
-                  placeholder="Contoh: HU.108 Lab RPL 1"
-                />
-              </div>
-            </div>
-
-            <div class="modal-footer">
-              <button type="button" @click="closeModal" class="btn btn-secondary">
-                Batal
-              </button>
-              <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
-                <span v-if="isSubmitting">Menyimpan...</span>
-                <span v-else>{{ isEditMode ? 'Simpan Perubahan' : 'Buat Aset (201)' }}</span>
-              </button>
-            </div>
-          </form>
-        </div>
+        </form>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import apiClient, { apiBaseUrl } from './api';
+
+const statuses = [
+  { value: 'tersedia', label: 'Tersedia' },
+  { value: 'dipinjam', label: 'Dipinjam' },
+  { value: 'perawatan', label: 'Perawatan' },
+  { value: 'rusak', label: 'Rusak' },
+];
+
+const statusLabel = (value) => statuses.find((s) => s.value === value)?.label || value;
 
 const isAuthenticated = ref(false);
 const currentUser = ref(null);
@@ -293,6 +287,7 @@ const loginForm = reactive({
 
 const assets = ref([]);
 const isLoading = ref(false);
+const loadError = ref(false);
 const searchQuery = ref('');
 const statusFilter = ref('');
 
@@ -301,18 +296,22 @@ const notification = reactive({
   type: 'success',
 });
 
+let notificationTimer = null;
+
 const showNotification = (message, type = 'success') => {
   notification.message = message;
   notification.type = type;
-  setTimeout(() => {
+  clearTimeout(notificationTimer);
+  notificationTimer = setTimeout(() => {
     notification.message = '';
-  }, 4000);
+  }, 5000);
 };
 
 const showModal = ref(false);
 const isEditMode = ref(false);
 const editingAssetId = ref(null);
 const formErrors = ref({});
+const firstField = ref(null);
 
 const form = reactive({
   name: '',
@@ -334,20 +333,64 @@ const resetForm = () => {
   editingAssetId.value = null;
 };
 
+const statusCount = computed(() => {
+  const count = { tersedia: 0, dipinjam: 0, perawatan: 0, rusak: 0 };
+  assets.value.forEach((item) => {
+    if (item.status in count) count[item.status] += 1;
+  });
+  return count;
+});
+
 const totalAssetValue = computed(() => {
   return assets.value.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
 });
 
+const assetsByStatus = computed(() => {
+  const order = statuses.map((s) => s.value);
+  return [...assets.value].sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status));
+});
+
+const findingText = computed(() => {
+  const total = assets.value.length;
+  if (isLoading.value && total === 0) return 'Memuat data aset...';
+  if (total === 0) return 'Belum ada alat yang tercatat.';
+  const away = total - statusCount.value.tersedia;
+  if (away === 0) return `Semua ${total} alat ada di ruang dan siap dipakai.`;
+  const parts = statuses
+    .filter((s) => s.value !== 'tersedia' && statusCount.value[s.value])
+    .map((s) => `${statusCount.value[s.value]} ${s.label.toLowerCase()}`);
+  return `${away} dari ${total} alat belum bisa dipakai: ${parts.join(', ')}.`;
+});
+
+const stripLabel = computed(() => {
+  return statuses
+    .filter((s) => statusCount.value[s.value])
+    .map((s) => `${statusCount.value[s.value]} ${s.label.toLowerCase()}`)
+    .join(', ');
+});
+
+const tabs = computed(() => [
+  { value: '', label: 'Semua', count: assets.value.length },
+  ...statuses.map((s) => ({ ...s, count: statusCount.value[s.value] })),
+]);
+
 const filteredAssets = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase();
   return assets.value.filter((item) => {
     const matchesSearch =
-      item.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      item.code.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchQuery.value.toLowerCase());
+      !query ||
+      [item.name, item.code, item.category, item.location]
+        .filter(Boolean)
+        .some((field) => field.toLowerCase().includes(query));
     const matchesStatus = statusFilter.value ? item.status === statusFilter.value : true;
     return matchesSearch && matchesStatus;
   });
 });
+
+const resetFilters = () => {
+  searchQuery.value = '';
+  statusFilter.value = '';
+};
 
 const formatRupiah = (val) => {
   return new Intl.NumberFormat('id-ID', {
@@ -370,15 +413,14 @@ const handleLogin = async () => {
 
     currentUser.value = user;
     isAuthenticated.value = true;
-    showNotification('Login berhasil! Token Sanctum tersimpan.', 'success');
     await fetchAssets();
   } catch (err) {
     if (err.response && err.response.status === 401) {
-      loginError.value = 'Email atau kata sandi tidak valid.';
+      loginError.value = 'Email atau kata sandi salah.';
     } else if (err.response && err.response.status === 422) {
-      loginError.value = 'Mohon isi format email dan kata sandi dengan benar.';
+      loginError.value = 'Isi email dengan format yang benar dan kata sandi tidak boleh kosong.';
     } else {
-      loginError.value = 'Gagal terhubung ke backend server API.';
+      loginError.value = `Server API di ${apiBaseUrl} tidak bisa dihubungi.`;
     }
   } finally {
     isSubmitting.value = false;
@@ -401,20 +443,27 @@ const handleLogout = async () => {
 
 const fetchAssets = async () => {
   isLoading.value = true;
+  loadError.value = false;
   try {
     const res = await apiClient.get('/assets');
     assets.value = res.data.data;
   } catch (err) {
-    showNotification('Gagal mengambil data aset dari server.', 'error');
+    loadError.value = true;
   } finally {
     isLoading.value = false;
   }
 };
 
+const openModal = async () => {
+  showModal.value = true;
+  await nextTick();
+  firstField.value?.focus();
+};
+
 const openCreateModal = () => {
   resetForm();
   isEditMode.value = false;
-  showModal.value = true;
+  openModal();
 };
 
 const openEditModal = (asset) => {
@@ -425,9 +474,9 @@ const openEditModal = (asset) => {
   form.code = asset.code;
   form.category = asset.category;
   form.status = asset.status;
-  form.price = asset.price;
+  form.price = Number(asset.price);
   form.location = asset.location || '';
-  showModal.value = true;
+  openModal();
 };
 
 const closeModal = () => {
@@ -446,19 +495,18 @@ const saveAsset = async () => {
       if (index !== -1) {
         assets.value[index] = updatedAsset;
       }
-      showNotification('Aset berhasil diperbarui (Status HTTP: 200 OK)', 'success');
+      showNotification(`Perubahan ${updatedAsset.code} tersimpan.`, 'success');
     } else {
       const res = await apiClient.post('/assets', form);
       assets.value.unshift(res.data.data);
-      showNotification('Aset berhasil dibuat (Status HTTP: 201 Created)', 'success');
+      showNotification(`${res.data.data.code} ditambahkan ke inventaris.`, 'success');
     }
     closeModal();
   } catch (err) {
     if (err.response && err.response.status === 422) {
       formErrors.value = err.response.data.errors || {};
-      showNotification('Validasi gagal (Status HTTP: 422 Unprocessable Content)', 'error');
     } else {
-      formErrors.value = { general: 'Terjadi kesalahan sistem saat menyimpan aset.' };
+      formErrors.value = { general: 'Aset belum tersimpan karena server tidak merespons. Coba lagi.' };
     }
   } finally {
     isSubmitting.value = false;
@@ -466,16 +514,28 @@ const saveAsset = async () => {
 };
 
 const handleDelete = async (asset) => {
-  if (!confirm(`Apakah Anda yakin ingin menghapus aset "${asset.name}" (${asset.code})?`)) {
+  if (!confirm(`Hapus ${asset.code} (${asset.name}) dari inventaris?`)) {
     return;
   }
   try {
     await apiClient.delete(`/assets/${asset.id}`);
     assets.value = assets.value.filter((a) => a.id !== asset.id);
-    showNotification(`Aset "${asset.name}" berhasil dihapus.`, 'success');
+    showNotification(`${asset.code} dihapus dari inventaris.`, 'success');
   } catch (err) {
-    showNotification('Gagal menghapus aset dari server.', 'error');
+    showNotification(`${asset.code} gagal dihapus. Coba lagi.`, 'error');
   }
+};
+
+const handleKeydown = (event) => {
+  if (event.key === 'Escape' && showModal.value) {
+    closeModal();
+  }
+};
+
+const handleUnauthorized = () => {
+  isAuthenticated.value = false;
+  currentUser.value = null;
+  loginError.value = 'Sesi berakhir. Silakan masuk lagi.';
 };
 
 onMounted(() => {
@@ -493,339 +553,470 @@ onMounted(() => {
     }
   }
 
-  window.addEventListener('auth:unauthorized', () => {
-    isAuthenticated.value = false;
-    currentUser.value = null;
-    showNotification('Sesi berakhir atau token tidak valid (401 Unauthorized)', 'error');
-  });
+  window.addEventListener('keydown', handleKeydown);
+  window.addEventListener('auth:unauthorized', handleUnauthorized);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown);
+  window.removeEventListener('auth:unauthorized', handleUnauthorized);
 });
 </script>
 
 <style scoped>
-.app-container {
-  min-height: 100vh;
-}
-
-/* Auth Layout */
-.auth-wrapper {
-  min-height: 100vh;
+.brand {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
 }
 
-.auth-card {
-  width: 100%;
-  max-width: 420px;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 32px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25);
+.wordmark {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--accent);
+  white-space: nowrap;
 }
 
-.auth-header {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.badge-tag {
-  display: inline-block;
-  padding: 4px 10px;
-  background: #eff6ff;
-  color: #2563eb;
-  border-radius: 9999px;
-  font-size: 11px;
-  font-weight: 700;
-  margin-bottom: 12px;
-}
-
-.auth-header h2 {
-  font-size: 22px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.auth-header .subtitle {
+.scope {
   font-size: 13px;
-  color: #64748b;
-  margin-top: 4px;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
-.form-group {
-  margin-bottom: 16px;
+.field {
   display: flex;
   flex-direction: column;
+  gap: 6px;
 }
 
-.form-group label {
+.field label {
   font-size: 13px;
-  font-weight: 600;
-  color: #334155;
-  margin-bottom: 6px;
+  font-weight: 500;
 }
 
-.btn {
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+.optional {
+  font-weight: 400;
+  color: var(--muted);
 }
 
-.btn-primary {
-  background: #2563eb;
-  color: #ffffff;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
-}
-
-.btn-secondary {
-  background: #e2e8f0;
-  color: #334155;
-}
-
-.btn-secondary:hover {
-  background: #cbd5e1;
+.field-error {
+  font-size: var(--fs-small);
+  color: var(--negative);
 }
 
 .btn-block {
   width: 100%;
 }
 
-.btn-outline-danger {
-  background: transparent;
-  border: 1px solid #f87171;
-  color: #dc2626;
-  padding: 6px 12px;
+.notice {
+  padding: 10px 14px;
+  border-radius: var(--radius-control);
   font-size: 13px;
 }
 
-.btn-outline-danger:hover {
-  background: #fef2f2;
+.notice-success {
+  background: var(--pill-positive-bg);
+  color: var(--pill-positive-ink);
 }
 
-.auth-footer {
-  margin-top: 24px;
-  text-align: center;
-  font-size: 12px;
-  color: #64748b;
-  border-top: 1px solid #f1f5f9;
+.notice-error {
+  background: var(--pill-negative-bg);
+  color: var(--pill-negative-ink);
+}
+
+/* Login */
+.login {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px 16px;
+}
+
+.login-sheet {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sheet);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-sheet .brand {
+  margin-bottom: 8px;
+}
+
+.login-sheet h1 {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.lead {
+  color: var(--muted);
+  margin-top: -8px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.login-form .btn {
+  margin-top: 4px;
+  height: 40px;
+}
+
+.server {
+  font-size: 13px;
+  color: var(--muted);
   padding-top: 16px;
+  border-top: 1px solid var(--rule);
+  overflow-wrap: anywhere;
 }
 
-/* Dashboard Layout */
-.navbar {
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  padding: 16px 32px;
+.server .mono {
+  color: var(--text);
+}
+
+.login-foot {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Shell */
+.app {
+  min-height: 100vh;
   display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  height: 56px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
+  gap: 16px;
 }
 
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.brand-icon {
-  font-size: 28px;
-}
-
-.nav-brand h1 {
-  font-size: 18px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.nav-brand .subtext {
-  font-size: 12px;
-  color: #64748b;
-}
-
-.nav-user {
+.account {
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
-.user-info {
+.account-id {
   display: flex;
   flex-direction: column;
   text-align: right;
+  line-height: 1.3;
 }
 
-.user-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #0f172a;
+.account-name {
+  font-weight: 500;
 }
 
-.user-email {
-  font-size: 12px;
-  color: #64748b;
+.account-email {
+  font-size: var(--fs-small);
+  color: var(--muted);
 }
 
-.main-content {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 32px 24px;
-}
-
-/* Metrics */
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.metric-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 20px;
-}
-
-.metric-label {
-  font-size: 13px;
-  color: #64748b;
-  font-weight: 600;
-}
-
-.metric-value {
-  font-size: 24px;
-  font-weight: 700;
-  margin: 6px 0;
-  color: #0f172a;
-}
-
-.metric-sub {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.text-success { color: #10b981; }
-.text-warning { color: #f59e0b; }
-.text-primary { color: #2563eb; }
-
-/* Table Card */
-.table-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-}
-
-.card-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
+.sheet {
+  flex: 1;
+  margin: 0 var(--sheet-inset) var(--sheet-inset);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sheet);
+  padding: 32px var(--pad) 40px;
   display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.title-row {
+  display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
   gap: 16px;
 }
 
-.card-header h2 {
-  font-size: 18px;
-  font-weight: 700;
+.title-row h1 {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 
-.card-header .subtitle {
-  font-size: 12px;
-  color: #64748b;
-  margin-top: 2px;
+.finding {
+  margin-top: 4px;
+  color: var(--muted);
 }
 
-.header-right {
+/* Readiness */
+.readiness {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1.4fr;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+
+.kpi {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kpi + .kpi {
+  border-left: 1px solid var(--border);
+}
+
+.kpi dt {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.kpi dd {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.kpi-main dd {
+  font-size: var(--fs-kpi);
+}
+
+.unit {
+  font-size: var(--fs-body);
+  color: var(--muted);
+}
+
+.strip {
+  display: flex;
+  gap: 4px;
+}
+
+.strip-cell {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.strip-bar {
+  height: 10px;
+  border-radius: 2px;
+}
+
+.strip-code {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-tersedia { background: var(--chart-ready); }
+.bar-dipinjam { background: var(--chart-loan); }
+.bar-perawatan { background: var(--chart-service); }
+.bar-rusak { background: var(--chart-broken); }
+
+.legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.legend li {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
 }
 
-.search-input {
-  width: 240px;
+.legend .num {
+  color: var(--text);
 }
 
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
 }
 
-.data-table th {
-  background: #f8fafc;
-  padding: 12px 20px;
-  text-align: left;
-  font-weight: 600;
-  color: #475569;
-  border-bottom: 1px solid #e2e8f0;
+/* List */
+.list {
+  display: flex;
+  flex-direction: column;
 }
 
-.data-table td {
-  padding: 14px 20px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #1e293b;
+.tabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
-.code-badge {
-  font-family: monospace;
-  font-size: 12px;
-  background: #f1f5f9;
-  padding: 2px 6px;
-  border-radius: 4px;
-  color: #0f172a;
-  border: 1px solid #cbd5e1;
+.tab {
+  height: 40px;
+  padding: 0 2px;
+  color: var(--muted);
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 
-.actions-cell {
+.tab:hover {
+  color: var(--text);
+}
+
+.tab.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.tab-count {
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: 2px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0 8px;
+}
+
+.search {
+  width: 320px;
+  max-width: 100%;
+}
+
+.count {
+  color: var(--muted);
   white-space: nowrap;
 }
 
-.btn-icon {
-  padding: 6px 10px;
-  font-size: 12px;
-  margin-left: 6px;
+.state {
+  padding: 48px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--muted);
+  border-top: 1px solid var(--rule);
 }
 
-.btn-edit {
-  background: #eff6ff;
-  color: #2563eb;
+.state-error p {
+  color: var(--negative);
 }
 
-.btn-edit:hover {
-  background: #dbeafe;
+.asset-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.btn-delete {
-  background: #fef2f2;
-  color: #dc2626;
+.asset-table th {
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--muted);
+  text-align: left;
+  padding: 10px 12px;
+  white-space: nowrap;
 }
 
-.btn-delete:hover {
-  background: #fee2e2;
+.asset-table td {
+  padding: 10px 12px;
+  height: 60px;
+  border-top: 1px solid var(--rule);
+  vertical-align: middle;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 40px !important;
-  color: #94a3b8;
+.asset-table th:first-child,
+.asset-table td:first-child {
+  padding-left: 0;
 }
 
-/* Modals */
-.modal-backdrop {
+.asset-table th:last-child,
+.asset-table td:last-child {
+  padding-right: 0;
+}
+
+.asset-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.asset-table tbody tr:hover {
+  background: var(--raised);
+}
+
+.right {
+  text-align: right !important;
+}
+
+.cell-code {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.cell-name {
+  min-width: 220px;
+}
+
+.cell-name .name {
+  display: block;
+  font-weight: 500;
+}
+
+.cell-name .category {
+  display: block;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.cell-room {
+  color: var(--muted);
+}
+
+.cell-price {
+  white-space: nowrap;
+}
+
+.cell-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Dialog */
+.backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(19, 20, 22, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -833,73 +1024,197 @@ onMounted(() => {
   z-index: 50;
 }
 
-.modal-card {
-  background: #ffffff;
-  border-radius: 12px;
+.dialog {
   width: 100%;
   max-width: 600px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(19, 20, 22, 0.18);
 }
 
-.modal-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
+.dialog-head {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 0 24px;
 }
 
-.close-btn {
-  background: transparent;
-  font-size: 24px;
-  color: #94a3b8;
+.dialog-head h2 {
+  font-size: 18px;
+  font-weight: 600;
 }
 
-.modal-body {
-  padding: 24px;
-}
-
-.form-row {
+.dialog-body {
+  padding: 16px 24px 24px;
   display: flex;
+  flex-direction: column;
   gap: 16px;
-  margin-bottom: 16px;
 }
 
-.flex-1 {
-  flex: 1;
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
-.modal-footer {
+.dialog-foot {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  margin-top: 24px;
-  border-top: 1px solid #f1f5f9;
-  padding-top: 16px;
+  margin-top: 8px;
 }
 
-.alert {
-  padding: 12px 16px;
-  border-radius: 6px;
-  font-size: 13px;
-  margin-bottom: 16px;
+@media (max-width: 900px) {
+  .kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .kpi:nth-child(3) {
+    border-left: none;
+  }
+
+  .kpi:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
+  }
+
+  .asset-table th:nth-child(3),
+  .asset-table td:nth-child(3) {
+    display: none;
+  }
 }
 
-.alert-error {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
+@media (max-width: 640px) {
+  .topbar {
+    padding: 0 16px;
+  }
 
-.alert-success {
-  background: #ecfdf5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
-}
+  .scope,
+  .account-id {
+    display: none;
+  }
 
-.field-error {
-  color: #dc2626;
-  font-size: 11px;
-  margin-top: 4px;
+  .sheet {
+    margin: 0;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    padding: 24px 16px 32px;
+  }
+
+  .title-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .title-row .btn {
+    height: 44px;
+  }
+
+  .kpi {
+    padding: 12px 14px;
+  }
+
+  .kpi dd {
+    font-size: 18px;
+  }
+
+  .kpi-main dd {
+    font-size: 24px;
+  }
+
+  .strip-code {
+    display: none;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .search {
+    width: 100%;
+    height: 44px;
+  }
+
+  .tab {
+    height: 44px;
+  }
+
+  .asset-table thead {
+    display: none;
+  }
+
+  .asset-table,
+  .asset-table tbody {
+    display: block;
+  }
+
+  .asset-table tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 12px;
+    padding: 14px 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .asset-table td {
+    display: block;
+    height: auto;
+    padding: 0 !important;
+    border: none;
+  }
+
+  .asset-table td:nth-child(3) {
+    display: none;
+  }
+
+  .cell-code {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: var(--fs-small);
+    color: var(--muted);
+  }
+
+  .cell-status {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: right;
+  }
+
+  .cell-name {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-width: 0;
+  }
+
+  .cell-price {
+    grid-column: 1;
+    grid-row: 3;
+    text-align: left !important;
+    align-self: center;
+  }
+
+  .cell-actions {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .cell-actions .btn {
+    height: 44px;
+    padding: 0 12px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dialog-foot .btn {
+    flex: 1;
+    height: 44px;
+  }
 }
 </style>
