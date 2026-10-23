@@ -15,242 +15,550 @@
       "key": "token",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "assetId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "assetCode",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
     {
-      "name": "1. Authentication",
+      "name": "1. Autentikasi",
       "item": [
         {
-          "name": "Login (Dapatkan Token)",
+          "name": "Login (200, simpan token)",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "var jsonData = pm.response.json();",
-                  "if (jsonData.token) {",
-                  "    pm.collectionVariables.set(\"token\", jsonData.token);",
-                  "    console.log(\"Token disimpan: \" + jsonData.token);",
-                  "}"
-                ],
-                "type": "text/javascript"
+                  "pm.test(\"Status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.collectionVariables.set(\"token\", pm.response.json().token);"
+                ]
               }
             }
           ],
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"admin@ugm.ac.id\",\n  \"password\": \"password123\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["login"]
             }
           }
         },
         {
-          "name": "Get Authenticated User (Profile)",
+          "name": "Profil pengguna (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{token}}", "type": "string" }
-              ]
-            },
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. CRUD Aset",
+      "item": [
+        {
+          "name": "Tampil semua aset (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
             }
           }
         },
         {
-          "name": "Logout (Revoke Token)",
+          "name": "Tambah aset (201)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"assetCode\", \"AST-PM-\" + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.collectionVariables.set(\"assetId\", pm.response.json().data.id);"
+                ]
+              }
+            }
+          ],
           "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets"
+              ]
+            },
             "auth": {
               "type": "bearer",
               "bearer": [
-                { "key": "token", "value": "{{token}}", "type": "string" }
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
               ]
             },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Access Point Ubiquiti UniFi 6 Pro\",\n  \"code\": \"{{assetCode}}\",\n  \"category\": \"Perangkat Jaringan\",\n  \"status\": \"tersedia\",\n  \"price\": 2750000,\n  \"location\": \"Ruang Server TEDI\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Tampil satu aset (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/{{assetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "{{assetId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ubah aset (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/{{assetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "{{assetId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Access Point Ubiquiti UniFi 6 Pro (Diperbarui)\",\n  \"code\": \"{{assetCode}}\",\n  \"category\": \"Perangkat Jaringan\",\n  \"status\": \"perawatan\",\n  \"price\": 2750000,\n  \"location\": \"Ruang Server TEDI\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Hapus aset (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets/{{assetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets",
+                "{{assetId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Kode status gagal",
+      "item": [
+        {
+          "name": "Validasi gagal (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 422\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"code\": \"\",\n  \"category\": \"\",\n  \"status\": \"invalid-status\",\n  \"price\": -1\n}"
+            }
+          }
+        },
+        {
+          "name": "Tanpa token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Keluar",
+      "item": [
+        {
+          "name": "Logout (200, token dicabut)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/logout",
-              "host": ["{{baseUrl}}"],
-              "path": ["logout"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "2. Assets CRUD",
-      "item": [
-        {
-          "name": "Tampil Semua Aset (Index - 200 OK)",
-          "request": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "logout"
+              ]
+            },
             "auth": {
               "type": "bearer",
               "bearer": [
-                { "key": "token", "value": "{{token}}", "type": "string" }
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
               ]
-            },
-            "method": "GET",
-            "header": [
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/assets",
-              "host": ["{{baseUrl}}"],
-              "path": ["assets"]
             }
           }
         },
         {
-          "name": "Tampil Satu Aset (Show - 200 OK)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{token}}", "type": "string" }
-              ]
-            },
-            "method": "GET",
-            "header": [
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/assets/1",
-              "host": ["{{baseUrl}}"],
-              "path": ["assets", "1"]
+          "name": "Token lama ditolak (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
             }
-          }
-        },
-        {
-          "name": "Tambah Aset Baru (Store - 201 Created)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{token}}", "type": "string" }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Access Point Ubiquiti UniFi 6 Pro\",\n  \"code\": \"AST-NET-010\",\n  \"category\": \"Perangkat Jaringan\",\n  \"status\": \"tersedia\",\n  \"price\": 3400000,\n  \"location\": \"Langit-langit HU.108\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/assets",
-              "host": ["{{baseUrl}}"],
-              "path": ["assets"]
-            }
-          }
-        },
-        {
-          "name": "Ubah Aset (Update - 200 OK)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{token}}", "type": "string" }
-              ]
-            },
-            "method": "PUT",
-            "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Access Point Ubiquiti UniFi 6 Pro (Updated)\",\n  \"code\": \"AST-NET-010\",\n  \"category\": \"Perangkat Jaringan\",\n  \"status\": \"dipinjam\",\n  \"price\": 3400000,\n  \"location\": \"Dipinjam Tim Dosen SV\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/assets/1",
-              "host": ["{{baseUrl}}"],
-              "path": ["assets", "1"]
-            }
-          }
-        },
-        {
-          "name": "Hapus Aset (Destroy - 200 OK)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{token}}", "type": "string" }
-              ]
-            },
-            "method": "DELETE",
-            "header": [
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/assets/1",
-              "host": ["{{baseUrl}}"],
-              "path": ["assets", "1"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "3. Pengujian Status Code Spesifik",
-      "item": [
-        {
-          "name": "Validasi Gagal (422 Unprocessable Content)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{token}}", "type": "string" }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"\",\n  \"code\": \"\",\n  \"category\": \"\",\n  \"status\": \"invalid-status\",\n  \"price\": -500\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/assets",
-              "host": ["{{baseUrl}}"],
-              "path": ["assets"]
-            }
-          }
-        },
-        {
-          "name": "Akses Tanpa Token (401 Unauthorized)",
+          ],
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/assets",
-              "host": ["{{baseUrl}}"],
-              "path": ["assets"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
             }
           }
         }
