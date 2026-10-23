@@ -21,8 +21,28 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_DB: uts_kepl_test
+          POSTGRES_USER: uts_kepl
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U uts_kepl -d uts_kepl_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       APP_KEY: ${{ secrets.APP_KEY }}
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: uts_kepl_test
+      DB_USERNAME: uts_kepl
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -31,14 +51,11 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, bcmath
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_pgsql, bcmath
           coverage: none
 
       - name: Copy .env.example
         run: cp .env.example .env
-
-      - name: Touch SQLite Database
-        run: touch database/database.sqlite
 
       - name: Cache Composer Dependencies
         uses: actions/cache@v4

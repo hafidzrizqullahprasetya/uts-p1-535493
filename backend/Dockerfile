@@ -1,37 +1,24 @@
-FROM php:8.5.12-cli-alpine
+FROM dunglas/frankenphp:1.13.2-php8.5.12-alpine
 
-WORKDIR /var/www/html
+WORKDIR /app
 
-RUN apk add --no-cache \
-    curl \
-    git \
-    unzip \
-    libzip-dev \
-    sqlite-dev \
-    libpng-dev \
-    oniguruma-dev \
-    libxml2-dev \
-    linux-headers \
-    && docker-php-ext-install -j$(nproc) \
-    pdo \
-    pdo_sqlite \
-    mbstring \
-    xml \
+RUN install-php-extensions \
+    pdo_pgsql \
+    bcmath \
     zip \
-    bcmath
+    intl
 
 COPY --from=composer:2.8 /usr/bin/composer /usr/bin/composer
 
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction
 
 COPY . .
 
 RUN composer dump-autoload --optimize \
-    && cp -n .env.example .env || true \
-    && touch database/database.sqlite \
-    && chown -R www-data:www-data storage bootstrap/cache database
+    && chmod +x docker/start.sh \
+    && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 8000
 
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+CMD ["docker/start.sh"]
