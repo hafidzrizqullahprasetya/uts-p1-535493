@@ -11,7 +11,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        User::updateOrCreate(
+        User::firstOrCreate(
             ['email' => 'admin@ugm.ac.id'],
             [
                 'name' => 'Administrator Lab TRPL',
@@ -63,7 +63,7 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($assets as $asset) {
-            Asset::updateOrCreate(['code' => $asset['code']], $asset);
+            Asset::firstOrCreate(['code' => $asset['code']], $asset);
         }
     }
 }
