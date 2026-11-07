@@ -2,7 +2,10 @@
 
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\HealthController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/health', [HealthController::class, 'check']);
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 

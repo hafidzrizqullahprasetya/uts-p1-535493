@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Asset;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class AssetApiTest extends TestCase
@@ -183,5 +184,36 @@ class AssetApiTest extends TestCase
         $this->assertDatabaseMissing('assets', [
             'id' => $asset->id,
         ]);
+    }
+
+    public function test_asset_logs_do_not_contain_personal_data_or_token(): void
+    {
+        Log::spy();
+
+        $this->withHeader('Authorization', 'Bearer '.$this->token)
+            ->postJson('/api/assets', [
+                'name' => 'Switch Cisco 2960',
+                'code' => 'AST-NET-002',
+                'category' => 'Jaringan',
+                'status' => 'tersedia',
+                'price' => 3000000,
+                'location' => 'Rak Server Lantai 2',
+            ])->assertStatus(201);
+
+        $this->withHeader('Authorization', 'Bearer '.$this->token)
+            ->postJson('/api/assets', ['name' => ''])
+            ->assertStatus(422);
+
+        $bebasDataPribadi = function (string $pesan, array $konteks): bool {
+            $isi = json_encode($konteks);
+
+            return $konteks['siapa'] === 'user_id:'.$this->user->id
+                && ! str_contains($isi, $this->user->email)
+                && ! str_contains($isi, $this->token)
+                && ! str_contains($isi, 'password');
+        };
+
+        Log::shouldHaveReceived('info')->withArgs($bebasDataPribadi)->once();
+        Log::shouldHaveReceived('warning')->withArgs($bebasDataPribadi)->once();
     }
 }
