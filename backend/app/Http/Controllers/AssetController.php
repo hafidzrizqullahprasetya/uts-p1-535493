@@ -21,7 +21,7 @@ class AssetController extends Controller
             ], 200);
         } catch (\Throwable $e) {
             Log::error('Gagal menghubungi basis data saat mengambil daftar aset', [
-                'siapa' => $request->user()?->email ?? 'pengguna',
+                'siapa' => 'user_id:'.($request->user()?->id ?? 'tidak_diketahui'),
                 'sedang_mengerjakan' => 'mengambil_daftar_aset',
                 'sebab' => $e->getMessage(),
             ]);
@@ -54,7 +54,7 @@ class AssetController extends Controller
 
         if ($validator->fails()) {
             Log::warning('Validasi data aset gagal', [
-                'siapa' => $request->user()?->email ?? 'pengguna',
+                'siapa' => 'user_id:'.($request->user()?->id ?? 'tidak_diketahui'),
                 'sedang_mengerjakan' => 'validasi_penyimpanan_aset',
                 'sebab' => 'Atribut masukan tidak memenuhi aturan validasi',
                 'kolom_gagal' => array_keys($validator->errors()->toArray()),
@@ -70,7 +70,7 @@ class AssetController extends Controller
             $asset = Asset::create($validator->validated());
 
             Log::info('Data aset berhasil disimpan', [
-                'siapa' => $request->user()?->email ?? 'pengguna_terautentikasi',
+                'siapa' => 'user_id:'.($request->user()?->id ?? 'tidak_diketahui'),
                 'sedang_mengerjakan' => 'menyimpan_data_aset',
                 'sebab' => 'Penyimpanan data aset baru ke basis data selesai',
                 'id_aset' => $asset->id,
@@ -84,7 +84,7 @@ class AssetController extends Controller
             ], 201);
         } catch (\Throwable $e) {
             Log::error('Gagal menghubungi basis data saat menyimpan aset', [
-                'siapa' => $request->user()?->email ?? 'pengguna_terautentikasi',
+                'siapa' => 'user_id:'.($request->user()?->id ?? 'tidak_diketahui'),
                 'sedang_mengerjakan' => 'menyimpan_data_aset',
                 'sebab' => $e->getMessage(),
             ]);
@@ -109,7 +109,7 @@ class AssetController extends Controller
 
         if ($validator->fails()) {
             Log::warning('Validasi perbaruan data aset gagal', [
-                'siapa' => $request->user()?->email ?? 'pengguna',
+                'siapa' => 'user_id:'.($request->user()?->id ?? 'tidak_diketahui'),
                 'sedang_mengerjakan' => 'validasi_perbaruan_aset',
                 'sebab' => 'Atribut perbaruan tidak memenuhi aturan validasi',
                 'kolom_gagal' => array_keys($validator->errors()->toArray()),
@@ -125,7 +125,7 @@ class AssetController extends Controller
             $asset->update($validator->validated());
 
             Log::info('Data aset berhasil diperbarui', [
-                'siapa' => $request->user()?->email ?? 'pengguna_terautentikasi',
+                'siapa' => 'user_id:'.($request->user()?->id ?? 'tidak_diketahui'),
                 'sedang_mengerjakan' => 'memperbarui_data_aset',
                 'sebab' => 'Perubahan data aset berhasil diterapkan ke basis data',
                 'id_aset' => $asset->id,
@@ -138,7 +138,7 @@ class AssetController extends Controller
             ], 200);
         } catch (\Throwable $e) {
             Log::error('Gagal menghubungi basis data saat memperbarui aset', [
-                'siapa' => $request->user()?->email ?? 'pengguna_terautentikasi',
+                'siapa' => 'user_id:'.($request->user()?->id ?? 'tidak_diketahui'),
                 'sedang_mengerjakan' => 'memperbarui_data_aset',
                 'sebab' => $e->getMessage(),
             ]);
@@ -157,7 +157,7 @@ class AssetController extends Controller
         $asset->delete();
 
         Log::info('Data aset berhasil dihapus', [
-            'siapa' => request()->user()?->email ?? 'pengguna_terautentikasi',
+            'siapa' => 'user_id:'.(request()->user()?->id ?? 'tidak_diketahui'),
             'sedang_mengerjakan' => 'menghapus_data_aset',
             'sebab' => 'Penghapusan data aset dari basis data selesai',
             'id_aset' => $assetId,

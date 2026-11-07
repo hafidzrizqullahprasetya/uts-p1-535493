@@ -34,7 +34,7 @@ class HealthController extends Controller
 
             Log::error('Healthcheck mendeteksi kegagalan koneksi basis data', [
                 'siapa' => 'sistem_pemantau',
-                'aktivitas' => 'pemeriksaan_kesehatan_database',
+                'sedang_mengerjakan' => 'pemeriksaan_kesehatan_database',
                 'sebab' => $e->getMessage(),
             ]);
         }
@@ -65,7 +65,7 @@ class HealthController extends Controller
 
             Log::error('Healthcheck mendeteksi kegagalan sistem cache', [
                 'siapa' => 'sistem_pemantau',
-                'aktivitas' => 'pemeriksaan_kesehatan_cache',
+                'sedang_mengerjakan' => 'pemeriksaan_kesehatan_cache',
                 'sebab' => $e->getMessage(),
             ]);
         }
