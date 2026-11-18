@@ -1,64 +1,65 @@
-# UTS Konstruksi dan Evolusi Perangkat Lunak (KEPL)
-**NIM:** 535493  
-**Nama:** Hafidz Rizqullah Prasetya  
-**Program Studi:** Sarjana Terapan Teknologi Rekayasa Perangkat Lunak (TRPL)  
-**Departemen:** Teknik Elektro dan Informatika (TEDI), Sekolah Vokasi, Universitas Gadjah Mada  
+# Inventaris Aset Laboratorium TRPL
 
----
+Proyek UTS dan tugas lanjutan mata kuliah Konstruksi dan Evolusi Perangkat Lunak (KEPL) 2026.
 
-## Deskripsi Sistem
-Sistem **Manajemen Inventaris Aset Laboratorium** dengan backend dan frontend terpisah:
+| | |
+|---|---|
+| Nama | Hafidz Rizqullah Prasetya |
+| NIM | 535493 |
+| Program studi | Sarjana Terapan Teknologi Rekayasa Perangkat Lunak (TRPL), Departemen Teknik Elektro dan Informatika, Sekolah Vokasi UGM |
 
-1. **Backend (`backend/`):** RESTful API Laravel dengan autentikasi token Laravel Sanctum. CRUD aset dalam format JSON dengan status `200`, `201`, `422`, dan `401`. Di dalam container, Laravel dilayani oleh **FrankenPHP**.
-2. **Frontend (`frontend/`):** Vue 3 (Vite) dan Axios. Login menyimpan token di `localStorage`, lalu token dikirim pada setiap permintaan. Alamat API diatur lewat `VITE_API_BASE_URL`.
-3. **Basis data:** PostgreSQL, datanya disimpan di named volume `pgdata`.
-4. **CI/CD (`.github/workflows/ci.yml`):**
-   - `Backend Test`: `php artisan test` terhadap PostgreSQL, dengan `APP_KEY` dan `DB_PASSWORD` dari GitHub Secrets.
-   - `Frontend Build`: `npm ci` dan `npm run build`.
-   - `Deploy to GHCR`: hanya pada push ke `main`, membangun image backend dan frontend lalu mengunggahnya ke `ghcr.io` dengan tag commit SHA.
+Aplikasi untuk mencatat peralatan laboratorium: admin masuk, lalu menambah, mengubah, mencari, dan menghapus data aset. Backend berupa REST API Laravel 13 dengan token Sanctum yang dilayani FrankenPHP, frontend Vue 3 di balik Nginx, dan data disimpan di PostgreSQL 18.6.
 
----
+## Dokumentasi
 
-## Menjalankan dengan Docker Compose
+| Dokumen | Isi |
+|---|---|
+| [docs/PRD.md](docs/PRD.md) | Tujuan, kebutuhan fungsional dan nonfungsional, batas lingkup |
+| [docs/ARSITEKTUR.md](docs/ARSITEKTUR.md) | Komponen, model data, alur permintaan, CI/CD, keputusan desain |
+| [docs/API.md](docs/API.md) | Daftar endpoint, contoh request dan response, kode status |
+| [docs/OPERASIONAL.md](docs/OPERASIONAL.md) | Menjalankan dengan Docker Compose, variabel `.env`, log, healthcheck, masalah yang pernah terjadi |
+| [docs/KONTRIBUSI.md](docs/KONTRIBUSI.md) | Alur branch dan PR, format pesan commit |
+
+## Menjalankan
+
 ```bash
 cp .env.example .env
-# isi APP_KEY (format base64:...) dan DB_PASSWORD di .env
+# isi APP_KEY (format base64:...) dan DB_PASSWORD
 docker compose up -d --build
+docker compose ps
 ```
 
-| Service | Isi | Akses dari host |
+| Layanan | Isi | Akses dari host |
 |---|---|---|
 | `db` | PostgreSQL 18.6 | tidak dibuka |
-| `backend` | Laravel + FrankenPHP | `http://localhost:${BACKEND_PORT}` (bawaan 8000) |
+| `backend` | Laravel + FrankenPHP | `http://localhost:${BACKEND_PORT}` (8001 jika tidak diisi) |
 | `frontend` | Nginx berisi hasil build Vue | `http://localhost:${FRONTEND_PORT}` (bawaan 8080) |
 
-Frontend memanggil `/api` di origin yang sama, lalu Nginx meneruskannya ke `http://backend:8000` lewat jaringan Docker Compose. Backend terhubung ke basis data lewat host `db`.
+Akun awal dari seeder: `admin@ugm.ac.id` / `password123`.
 
----
+Frontend memanggil `/api` di origin yang sama, lalu Nginx meneruskannya ke `http://backend:8000`. Kesehatan basis data dan cache bisa dicek di `http://localhost:8001/health`.
 
-## Struktur Direktori
+## Struktur direktori
+
 ```text
 uts-p1-535493/
-├── .github/workflows/ci.yml   # CI (test + build) dan CD ke GHCR
-├── docker-compose.yml         # db, backend, frontend
-├── .env.example               # contoh kredensial untuk Docker Compose
+├── .github/workflows/ci.yml   # test backend, build frontend, push image ke GHCR
+├── compose.yaml               # db, backend, frontend
+├── .env.example               # contoh variabel untuk Docker Compose
+├── docs/                      # PRD, arsitektur, API, operasional, kontribusi
 ├── backend/
-│   ├── app/                   # Controller dan Model
-│   ├── database/              # Migrasi dan seeder
+│   ├── app/                   # controller (Asset, Auth, Health) dan model
+│   ├── database/              # migrasi dan seeder
 │   ├── docker/start.sh        # migrasi, seeder, lalu FrankenPHP
-│   ├── postman/               # Postman Collection
-│   ├── tests/Feature/         # Feature test API
-│   └── Dockerfile             # FrankenPHP, layer caching Composer
+│   ├── postman/               # koleksi Postman
+│   ├── tests/Feature/         # feature test API, health, dan log
+│   └── Dockerfile             # FrankenPHP dengan cache layer Composer
 └── frontend/
-    ├── src/                   # Komponen Vue dan klien Axios
-    ├── nginx.conf             # SPA + proxy /api ke backend
-    └── Dockerfile             # Multi-stage: Node.js lalu Nginx
+    ├── src/                   # komponen Vue dan klien Axios
+    ├── nginx.conf             # SPA dan proxy /api ke backend
+    └── Dockerfile             # multi-stage: Node lalu Nginx
 ```
 
----
-
-## Akun Pengujian
-Dibuat oleh seeder: `admin@ugm.ac.id` / `password123`.
-
 ## Koleksi Postman
-`backend/postman/uts_kepl_asset_api.postman_collection.json`. Variabel `baseUrl` bawaannya `http://127.0.0.1:8000/api`; sesuaikan dengan `BACKEND_PORT` jika diubah.
+
+`backend/postman/uts_kepl_asset_api.postman_collection.json`. Variabel `baseUrl` bawaannya `http://127.0.0.1:8000/api`; ganti port sesuai `BACKEND_PORT`.
