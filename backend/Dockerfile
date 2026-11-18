@@ -19,6 +19,6 @@ RUN composer dump-autoload --optimize \
     && chmod +x docker/start.sh \
     && chown -R www-data:www-data storage bootstrap/cache
 
-EXPOSE 8000
+EXPOSE 8000 9180
 
 CMD ["docker/start.sh"]

@@ -1,0 +1,12 @@
+groups:
+  - name: aset-lab
+    rules:
+      - alert: BackendTidakBisaDihubungi
+        expr: up{job="backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend Laravel tidak bisa dihubungi Prometheus selama lebih dari 1 menit"
+          description: "Target {{ $labels.instance }} gagal di-scrape. API aset dan halaman login di frontend ikut tidak bisa dipakai."
+          tindakan_pertama: "Jalankan `docker compose ps backend` untuk melihat apakah container mati atau unhealthy, lalu baca `docker compose logs --tail=50 backend`. Jika container berhenti, nyalakan lagi dengan `docker compose start backend`."
