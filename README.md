@@ -24,7 +24,7 @@ Aplikasi untuk mencatat peralatan laboratorium: admin masuk, lalu menambah, meng
 
 ```bash
 cp .env.example .env
-# isi APP_KEY (format base64:...) dan DB_PASSWORD
+# isi APP_KEY (format base64:...), DB_PASSWORD, dan GRAFANA_ADMIN_PASSWORD
 docker compose up -d --build
 docker compose ps
 ```
@@ -34,6 +34,9 @@ docker compose ps
 | `db` | PostgreSQL 18.6 | tidak dibuka |
 | `backend` | Laravel + FrankenPHP | `http://localhost:${BACKEND_PORT}` (8001 jika tidak diisi) |
 | `frontend` | Nginx berisi hasil build Vue | `http://localhost:${FRONTEND_PORT}` (bawaan 8080) |
+| `prometheus` | Prometheus 3.16 | `http://127.0.0.1:9090` |
+| `grafana` | Grafana 13.3 | `http://127.0.0.1:3000` |
+| `cadvisor`, `node-exporter` | Metrik container dan host | tidak dibuka |
 
 Akun awal dari seeder: `admin@ugm.ac.id` / `password123`.
 
@@ -47,10 +50,12 @@ uts-p1-535493/
 ├── compose.yaml               # db, backend, frontend
 ├── .env.example               # contoh variabel untuk Docker Compose
 ├── docs/                      # PRD, arsitektur, API, operasional, kontribusi
+├── monitoring/                # prometheus.yml, alerts.yml, provisioning dan dashboard Grafana
 ├── backend/
 │   ├── app/                   # controller (Asset, Auth, Health) dan model
 │   ├── database/              # migrasi dan seeder
 │   ├── docker/start.sh        # migrasi, seeder, lalu FrankenPHP
+│   ├── docker/Caddyfile       # server :8000 dan metrik :9180
 │   ├── postman/               # koleksi Postman
 │   ├── tests/Feature/         # feature test API, health, dan log
 │   └── Dockerfile             # FrankenPHP dengan cache layer Composer

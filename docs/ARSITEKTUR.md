@@ -10,9 +10,13 @@ flowchart LR
     B -->|pdo_pgsql, host db:5432| D[(db<br/>PostgreSQL 18.6)]
     D --- V[(volume pgdata)]
     B -->|stdout| L[docker compose logs]
+    PR[prometheus] -->|scrape :9180/metrics| B
+    PR -->|scrape :8080| C[cadvisor]
+    PR -->|scrape :9100| N[node-exporter]
+    G[grafana :3000] -->|PromQL| PR
 ```
 
-Ketiga layanan didefinisikan di `compose.yaml` dan berada di satu jaringan Docker bawaan Compose, jadi mereka saling memanggil dengan nama layanan (`db`, `backend`). Hanya `frontend` dan `backend` yang membuka port ke host. Basis data tidak bisa diakses dari luar jaringan Compose.
+Semua layanan didefinisikan di `compose.yaml` dan berada di satu jaringan Docker bawaan Compose, jadi mereka saling memanggil dengan nama layanan (`db`, `backend`, `prometheus`). `frontend` dan `backend` membuka port ke host. Prometheus dan Grafana hanya dibuka di `127.0.0.1`. Basis data, cAdvisor, dan node-exporter tidak bisa diakses dari luar jaringan Compose.
 
 ## Komponen
 
@@ -25,7 +29,8 @@ Ketiga layanan didefinisikan di `compose.yaml` dan berada di satu jaringan Docke
 
 ### backend
 
-- Laravel 13 di PHP 8.5, dilayani FrankenPHP (`frankenphp php-server`) di port 8000.
+- Laravel 13 di PHP 8.5, dilayani FrankenPHP (`frankenphp run --config docker/Caddyfile`) di port 8000.
+- Caddyfile yang sama menyalakan metrik Caddy dan membukanya di port 9180 (`/metrics`) untuk Prometheus. Admin API Caddy tetap di `localhost:2019` di dalam container, jadi container lain tidak bisa mengubah konfigurasi server.
 - `docker/start.sh` menjalankan `config:cache`, `migrate --force`, dan `db:seed --force` setiap container mulai. Seeder memakai `firstOrCreate`, jadi data yang sudah diubah tidak tertimpa.
 - Autentikasi memakai Laravel Sanctum (token pribadi di tabel `personal_access_tokens`).
 - `Dockerfile` menyalin `composer.json` dan `composer.lock` lalu memasang dependensi sebelum menyalin kode, sehingga perubahan kode tidak membatalkan cache layer Composer.
@@ -95,6 +100,19 @@ sequenceDiagram
 - Healthcheck `backend` di `compose.yaml` memanggil `/health`, sehingga container berubah menjadi `unhealthy` ketika basis data mati. `frontend` baru dijalankan setelah `backend` sehat, dan `backend` baru dijalankan setelah `db` sehat.
 - Setiap log aplikasi memakai kunci `siapa`, `sedang_mengerjakan`, dan `sebab`. Identitas pengguna ditulis sebagai `user_id:<angka>`, bukan email.
 
+## Monitoring
+
+| Layanan | Image | Tugas |
+|---|---|---|
+| `prometheus` | `prom/prometheus:v3.16.0` | Mengambil metrik tiap 15 detik dan mengevaluasi aturan di `monitoring/prometheus/alerts.yml`. Data disimpan 7 hari di volume `prometheus_data` |
+| `grafana` | `grafana/grafana:13.3.1` | Menampilkan dashboard dari `monitoring/grafana/dashboards/aset-lab.json`. Datasource dan dashboard dipasang lewat provisioning, data Grafana di volume `grafana_data` |
+| `cadvisor` | `ghcr.io/google/cadvisor:v0.61.0` | Metrik CPU dan memori per container. Label yang disimpan hanya `com.docker.compose.project` dan `com.docker.compose.service` |
+| `node-exporter` | `prom/node-exporter:v1.12.1` | Metrik mesin host (CPU, memori, disk) |
+
+Metrik permintaan per detik diambil dari `caddy_http_request_duration_seconds_count{server="srv0",handler="php"}`, yaitu permintaan yang benar-benar sampai ke Laravel. Panel CPU dan memori disaring dengan label `container_label_com_docker_compose_project="uts-kepl-535493"` supaya container lain di mesin yang sama tidak ikut tampil.
+
+Aturan alarm `BackendTidakBisaDihubungi` menyala jika `up{job="backend"} == 0` selama 1 menit. Anotasi `tindakan_pertama` berisi perintah yang harus dijalankan penerima alarm.
+
 ## CI/CD
 
 File `.github/workflows/ci.yml` punya tiga job:
@@ -113,4 +131,5 @@ Branch `main` dilindungi: perubahan harus lewat pull request dan dua job pertama
 | Nginx frontend sebagai proxy `/api` | Browser memanggil origin yang sama, tidak perlu mengatur CORS untuk produksi | Backend tetap dibuka di port 8001 untuk Postman dan pengujian |
 | Migrasi dan seeder dijalankan saat container mulai | `docker compose up` langsung menghasilkan aplikasi siap pakai | Startup sedikit lebih lama; seeder harus idempoten |
 | Cache memakai driver `file` | Tidak perlu layanan Redis untuk skala tugas ini | Pemeriksaan cache di `/health` menguji penulisan ke disk container |
+| Metrik permintaan dari Caddy, bukan library Prometheus di Laravel | FrankenPHP sudah membawa modul metrics, jadi tidak perlu menambah dependensi PHP dan penyimpanan counter | Mode `php-server` diganti `frankenphp run` dengan Caddyfile sendiri |
 | Penyaringan daftar aset di sisi klien | Jumlah aset kecil, satu permintaan cukup | Perlu paginasi di API jika data bertambah banyak |

@@ -22,6 +22,9 @@ Tunggu sampai `db` dan `backend` berstatus `healthy`. Frontend baru dijalankan s
 | http://localhost:8080 | Aplikasi (masuk dengan `admin@ugm.ac.id` / `password123`) |
 | http://localhost:8001/health | Status basis data dan cache |
 | http://localhost:8001/api | API untuk Postman |
+| http://localhost:9090/targets | Status target Prometheus |
+| http://localhost:9090/alerts | Status aturan alarm |
+| http://localhost:3000 | Grafana, dashboard ada di folder "Aset Lab TRPL" |
 
 ## Variabel lingkungan (`.env` di akar repo)
 
@@ -33,6 +36,10 @@ Tunggu sampai `db` dan `backend` berstatus `healthy`. Frontend baru dijalankan s
 | `DB_PASSWORD` | (rahasia) | Password PostgreSQL, wajib diisi |
 | `BACKEND_PORT` | `8001` | Port host untuk backend. Jika tidak diisi, Compose memakai 8001 |
 | `FRONTEND_PORT` | `8080` | Port host untuk frontend |
+| `GRAFANA_ADMIN_USER` | `admin` | Nama pengguna admin Grafana |
+| `GRAFANA_ADMIN_PASSWORD` | (rahasia) | Password admin Grafana, wajib diisi. Compose menolak jalan jika kosong |
+| `PROMETHEUS_PORT` | `9090` | Port Prometheus di `127.0.0.1` |
+| `GRAFANA_PORT` | `3000` | Port Grafana di `127.0.0.1` |
 
 `.env` tidak ikut di-commit. Di CI, `APP_KEY` dan `DB_PASSWORD` disimpan sebagai GitHub Secrets.
 
@@ -83,10 +90,29 @@ docker compose start db
 sleep 30 && docker compose ps backend   # kembali (healthy)
 ```
 
+## Monitoring dan alarm
+
+Password admin Grafana diambil dari `GRAFANA_ADMIN_PASSWORD` saat volume `grafana_data` pertama kali dibuat. Untuk menggantinya setelah itu:
+
+```bash
+docker compose exec grafana grafana cli admin reset-admin-password '<password-baru>'
+```
+
+Uji alarm:
+
+```bash
+docker compose stop backend
+# http://localhost:9090/alerts: BackendTidakBisaDihubungi menjadi PENDING, lalu FIRING setelah 1 menit
+docker compose start backend
+```
+
+Dashboard tersimpan sebagai berkas JSON dan dipasang lewat provisioning dengan `allowUiUpdates: false`. Perubahan panel dilakukan di `monitoring/grafana/dashboards/aset-lab.json`, lalu `docker compose restart grafana`.
+
 ## Masalah yang pernah terjadi
 
 | Gejala | Penyebab | Penanganan |
 |---|---|---|
 | `bind: address already in use` di port 8000 | Port 8000 di laptop pengembang dipakai aplikasi lain | Pakai `BACKEND_PORT=8001` |
 | Backend tertahan di `health: starting` | Healthcheck bawaan image FrankenPHP memeriksa admin endpoint port 2019 yang mati di mode `php-server` | Healthcheck diganti ke `/health` di `compose.yaml` |
+| `docker compose up` gagal dengan `failed commit on ref "layer-sha256:..."` | Beberapa image ditarik bersamaan dan containerd gagal memindahkan layer | Tarik image satu per satu dengan `docker pull`, lalu `up` lagi |
 | Compose memperingatkan "Found multiple config files" | Dulu ada `docker-compose.yml` lama di samping `compose.yaml` | Berkas lama dihapus, hanya `compose.yaml` yang dipakai |
